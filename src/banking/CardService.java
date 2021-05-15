@@ -1,6 +1,9 @@
 package banking;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class CardService {
 
@@ -14,8 +17,25 @@ public class CardService {
     return stringBuilder.toString();
   }
 
+  public static String addChecksumByLuhnAlgorithm(String digits) {
+    int[] arr = new int[digits.length()];
+    for (int i = 0; i < digits.length(); i++) {
+      int digit = digits.charAt(i) - '0';
+      if (i % 2 == 0) {
+        arr[i] = digit * 2 > 9 ? digit * 2 - 9 : digit * 2;
+      } else {
+        arr[i] = digit;
+      }
+    }
+
+    int sum = Arrays.stream(arr).sum();
+    int checksum = sum % 10 == 0 ? 0 : 10 - (sum % 10);
+
+    return digits + checksum;
+  }
+
   public static String generateCardNumber() {
-    return Card.BIN + generateRandomIntSequenceStringOfLength(10);
+    return addChecksumByLuhnAlgorithm(Card.BIN + generateRandomIntSequenceStringOfLength(9));
   }
 
   public static String generateCardPin() {
