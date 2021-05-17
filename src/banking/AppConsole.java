@@ -142,8 +142,7 @@ public class AppConsole {
     System.out.println("Transfer");
     System.out.println("Enter card number:");
     String cardNumber = scanner.next();
-    if (!cardNumber.startsWith("400000")
-        || cardNumber.length() != CardService.CARD_LENGTH
+    if (cardNumber.length() != CardService.CARD_LENGTH
         || !CardService.isValidCardNumberLuhnlgorithm(cardNumber)) {
       System.out.println("Probably you made a mistake in the card number. Please try again!");
     } else if (!findCardInDatabaseByNumber(cardNumber)) {
