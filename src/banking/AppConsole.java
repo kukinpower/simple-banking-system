@@ -1,6 +1,7 @@
 package banking;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -18,7 +19,10 @@ public class AppConsole {
       "0. Exit");
   private final static String accountMenu = String.join(System.lineSeparator(),
       "1. Balance",
-      "2. Log out",
+      "2. Add income",
+      "3. Do transfer",
+      "4. Close account",
+      "5. Log out",
       "0. Exit");
 
   private final static String CREATE_TABLE = "create table IF NOT EXISTS card"
@@ -29,6 +33,8 @@ public class AppConsole {
   private final static String INSERT_CARD = "insert into card(number, pin) values(?, ?)";
   private final static String FIND_CARD = "select * from card"
       + " where number = '%s' and pin = '%s'";
+  private final static String FIND_CARD_BY_NUMBER = "select * from card"
+      + " where number = '%s'";
   private final static String GET_CARD_BALANCE = "select balance from card"
       + " where number = '%s' and pin = '%s'";
 
@@ -87,9 +93,11 @@ public class AppConsole {
     BankAccount account = null;
     if (!isValidInput(cardNumber, pin)
         || !findCardInDatabase(cardNumber, pin)) {
+//        || (account = getAccountByCard(new Card(cardNumber, pin))) == null) {
       System.out.println("Wrong card number or PIN!");
       return false;
     }
+//    activeAccount = account;
     currentNumber = cardNumber;
     currentPin = pin;
     System.out.println("You have successfully logged in!");
@@ -99,6 +107,76 @@ public class AppConsole {
   private void logOut() {
     activeAccount = null;
     System.out.println("You have successfully logged out!");
+  }
+
+  private static final String UPDATE_CARD_BALANCE = "update card set balance = balance + ?" +
+      " where number = ?";
+
+  private void updateCardBalance(String number, BigDecimal amount) throws SQLException {
+    PreparedStatement preparedStatement = connection.prepareStatement(UPDATE_CARD_BALANCE);
+    preparedStatement.setInt(1, amount.intValue()); //todo bigdecimal
+    preparedStatement.setString(2, number);
+    preparedStatement.executeUpdate();
+    preparedStatement.close();
+  }
+
+  private void addIncome() throws SQLException {
+    System.out.println("Enter income:");
+    int income = scanner.nextInt();
+    updateCardBalance(currentNumber, BigDecimal.valueOf(income));
+    System.out.println("Income was added!");
+  }
+
+  private boolean findCardInDatabaseByNumber(String number) throws SQLException {
+    try (Statement statement = connection.createStatement()) {
+      ResultSet resultSet = statement.executeQuery(String.format(FIND_CARD_BY_NUMBER, number));
+
+      if (!resultSet.next()) {
+        return false;
+      }
+      return true;
+    }
+  }
+
+  private void doTransfer() throws SQLException {
+    System.out.println("Transfer");
+    System.out.println("Enter card number:");
+    String cardNumber = scanner.next();
+    if (!cardNumber.startsWith("400000")
+        || cardNumber.length() != CardService.CARD_LENGTH
+        || !CardService.isValidCardNumberLuhnlgorithm(cardNumber)) {
+      System.out.println("Probably you made a mistake in the card number. Please try again!");
+    } else if (!findCardInDatabaseByNumber(cardNumber)) {
+      System.out.println("Such a card does not exist.");
+    } else {
+      System.out.println("Enter how much money you want to transfer:");
+      int amount = scanner.nextInt();
+      if (queryCardBalance(currentNumber, currentPin) < amount) {
+        System.out.println("Not enough money!");
+      } else {
+        connection.setAutoCommit(false);
+        updateCardBalance(cardNumber, BigDecimal.valueOf(amount));
+        updateCardBalance(currentNumber, BigDecimal.valueOf(-amount));
+        connection.commit();
+        System.out.println("Success!");
+      }
+    }
+  }
+
+  private static final String DELETE_CARD = "delete from card" +
+      " where number = ? and pin = ?";
+
+  private void deleteCardFromDatabase(String number, String pin) throws SQLException {
+    PreparedStatement preparedStatement = connection.prepareStatement(DELETE_CARD);
+    preparedStatement.setString(1, number);
+    preparedStatement.setString(2, pin);
+    preparedStatement.executeUpdate();
+    preparedStatement.close();
+  }
+
+  private void closeAccount() throws SQLException {
+    deleteCardFromDatabase(currentNumber, currentPin);
+    System.out.println("The account has been closed!");
   }
 
   private boolean loginMenu() throws SQLException {
@@ -122,6 +200,18 @@ public class AppConsole {
           System.out.println(queryCardBalance(currentNumber, currentPin));
           break;
         case 2:
+          System.out.println();
+          addIncome();
+          break;
+        case 3:
+          System.out.println();
+          doTransfer();
+          break;
+        case 4:
+          System.out.println();
+          closeAccount();
+          return true;
+        case 5:
           System.out.println();
           logOut();
           return true;

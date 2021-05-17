@@ -3,6 +3,7 @@ package banking;
 import java.math.BigDecimal;
 
 public class Card {
+
   public static String BIN = "400000";
   private String pin;
   private String number;

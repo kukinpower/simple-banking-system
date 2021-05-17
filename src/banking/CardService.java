@@ -1,11 +1,11 @@
 package banking;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 public class CardService {
+
+  public static int CARD_LENGTH = 16;
 
   private static String generateRandomIntSequenceStringOfLength(int length) {
     StringBuilder stringBuilder = new StringBuilder();
@@ -17,7 +17,7 @@ public class CardService {
     return stringBuilder.toString();
   }
 
-  public static String addChecksumByLuhnAlgorithm(String digits) {
+  public static int getCardSumByLuhn(String digits) {
     int[] arr = new int[digits.length()];
     for (int i = 0; i < digits.length(); i++) {
       int digit = digits.charAt(i) - '0';
@@ -28,14 +28,20 @@ public class CardService {
       }
     }
 
-    int sum = Arrays.stream(arr).sum();
-    int checksum = sum % 10 == 0 ? 0 : 10 - (sum % 10);
+    return Arrays.stream(arr).sum();
+  }
 
-    return digits + checksum;
+  public static boolean isValidCardNumberLuhnlgorithm(String number) {
+    int sum = getCardSumByLuhn(number.substring(0, number.length() - 1));
+    int checksum = Integer.parseInt(number.substring(number.length() - 1));
+    return (sum + checksum) % 10 == 0;
   }
 
   public static String generateCardNumber() {
-    return addChecksumByLuhnAlgorithm(Card.BIN + generateRandomIntSequenceStringOfLength(9));
+    String digits = Card.BIN + generateRandomIntSequenceStringOfLength(9);
+    int sum = getCardSumByLuhn(digits);
+    int checksum = sum % 10 == 0 ? 0 : 10 - (sum % 10);
+    return digits + checksum;
   }
 
   public static String generateCardPin() {
